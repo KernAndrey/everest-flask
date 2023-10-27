@@ -1,0 +1,45 @@
+version: '3'
+services:
+  flask-app:
+    build:
+      context: .
+    environment:
+      FLASK_APP: 'app.py'
+      FLASK_RUN_HOST: '0.0.0.0'
+      FLASK_ENV: 'development'
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    depends_on:
+      - mysql
+      - redis
+
+  mysql:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: 'password'
+      MYSQL_DATABASE: 'db'
+      MYSQL_USER: 'user'
+      MYSQL_PASSWORD: 'password'
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  redis:
+    image: redis:latest
+
+  celery-worker:
+    build:
+      context: .  # Path to your Flask app directory
+    command: celery -A celery worker --loglevel=info
+    depends_on:
+      - flask-app
+      - redis
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+volumes:
+  mysql-data:
